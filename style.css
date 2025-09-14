@@ -1,0 +1,28 @@
+/* style.css */
+body, html {
+  margin: 0;
+  height: 100%;
+  background-color: #02929A; /* Updated background */
+  color: white; /* optional: makes text readable */
+  font-family: Arial, sans-serif;
+  text-align: center;
+}
+
+.chooseButton {
+  background-color: white;
+  color: #02929A;
+  border: none;
+  padding: 12px 24px;
+  margin: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+
+  /* Rounded square shape */
+  border-radius: 12px; 
+
+  /* Extra polish */
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+
