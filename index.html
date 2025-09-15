@@ -25,29 +25,27 @@
   <button type="submit">Submit</button>
 </form>
 
-<!-- thank you message -->
 <p id="thankyou" style="display:none; color:green; font-weight:bold;">
   ✅ Thank you! Your response has been recorded.
 </p>
 
 <script>
-  document.getElementById("myForm").addEventListener("submit", function(e) {
-    e.preventDefault(); // stop page redirect
+document.getElementById("myForm").addEventListener("submit", function(e) {
+  e.preventDefault(); // stop redirect
 
-    // Send the data using fetch()
-    const formData = new FormData(this);
-    fetch("https://docs.google.com/forms/d/e/1FAIpQLSdYO_thRRcKAeWEL3p1rimJdRLpifTFOJmA-BmcGUnHW7YTVg/formResponse", {
-      method: "POST",
-      body: formData,
-      mode: "no-cors" // required for Google Forms
-    }).then(() => {
-      // Show thank you message
-      document.getElementById("thankyou").style.display = "block";
-      // Reset form fields
-      document.getElementById("myForm").reset();
-    });
+  const formData = new FormData(this);
+
+  fetch("https://docs.google.com/forms/d/e/1FAIpQLSdYO_thRRcKAeWEL3p1rimJdRLpifTFOJmA-BmcGUnHW7YTVg/formResponse", {
+    method: "POST",
+    body: formData,
+    mode: "no-cors" // needed because Google blocks CORS
+  }).then(() => {
+    document.getElementById("thankyou").style.display = "block";
+    this.reset();
   });
+});
 </script>
+
   <h1>Test</h1>
   <p>Choose a page:</p>
 
@@ -57,6 +55,7 @@
 
 </body>
 </html>
+
 
 
 
