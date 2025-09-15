@@ -6,46 +6,25 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<form id="myForm">
+<form action="https://docs.google.com/forms/d/e/1FAIpQLSdYO_thRRcKAeWEL3p1rimJdRLpifTFOJmA-BmcGUnHW7YTVg/formResponse" 
+      method="POST" 
+      target="hidden_iframe" 
+      onsubmit="submitted=true;">
+
   <label for="name">Name:</label>
-  <input type="text" id="name" name="entry.2005620554" required><br><br>
-
-  <label for="email">Email:</label>
-  <input type="email" id="email" name="entry.1045781291" required><br><br>
-
-  <label for="address">Address:</label>
-  <textarea id="address" name="entry.1065046570" required></textarea><br><br>
-
-  <label for="phone">Phone number:</label>
-  <input type="text" id="phone" name="entry.1166974658"><br><br>
-
-  <label for="comments">Comments:</label>
-  <textarea id="comments" name="entry.839337160"></textarea><br><br>
-
+  <input type="text" id="name" name="entry.2005620554" required>
   <button type="submit">Submit</button>
 </form>
+
+<iframe name="hidden_iframe" style="display:none;" onload="if(submitted){document.getElementById('thankyou').style.display='block';}"></iframe>
 
 <p id="thankyou" style="display:none; color:green; font-weight:bold;">
   ✅ Thank you! Your response has been recorded.
 </p>
 
 <script>
-document.getElementById("myForm").addEventListener("submit", function(e) {
-  e.preventDefault(); // stop redirect
-
-  const formData = new FormData(this);
-
-  fetch("https://docs.google.com/forms/d/e/1FAIpQLSdYO_thRRcKAeWEL3p1rimJdRLpifTFOJmA-BmcGUnHW7YTVg/formResponse", {
-    method: "POST",
-    body: formData,
-    mode: "no-cors" // needed because Google blocks CORS
-  }).then(() => {
-    document.getElementById("thankyou").style.display = "block";
-    this.reset();
-  });
-});
+  var submitted = false;
 </script>
-
   <h1>Test</h1>
   <p>Choose a page:</p>
 
@@ -55,6 +34,7 @@ document.getElementById("myForm").addEventListener("submit", function(e) {
 
 </body>
 </html>
+
 
 
 
