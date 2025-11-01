@@ -75,25 +75,26 @@
       align-items: center;
       overflow: hidden;
       position: relative;
-      /* Cursor for desktop */
       cursor: grab;
-      /* Disable default touch actions to prevent conflicts */
-      touch-action: none; 
+      touch-action: none;
     }
 
-    .map-container img {
-      transition: transform 0.0s;
-      width: 100%;
-      height: 100%;
-      object-fit: contain; 
-      user-drag: none;
-      -webkit-user-drag: none;
-      user-select: none;
-      -moz-user-select: none;
-      -webkit-user-select: none;
-      -ms-user-select: none;
+    .map-inner {
+      position: relative;
+      transform-origin: center center;
+      transition: transform 0s;
+      width: 1200px; /* Fixed base width */
+      height: auto;
     }
-  
+
+    .map-inner img {
+      width: 100%;
+      height: auto;
+      display: block;
+      pointer-events: none;
+      user-select: none;
+    }
+
     .map-container.dragging {
       cursor: grabbing;
     }
@@ -123,6 +124,92 @@
       color: #0288d1;
       font-size: 20px;
     }
+
+    /* Pins + Popup */
+    .pin {
+      position: absolute;
+      transform: translate(-50%, -100%);
+      cursor: pointer;
+      z-index: 5;
+    }
+
+   .pin::before {
+  content: "\f024"; /* flag icon */
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #00BCD4; /* turquoise */
+  color: white;
+  font-size: 18px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+.popup {
+  position: absolute;
+  top: -10px;
+  left: 35px;
+  width: 260px;
+  background: #fff;
+  border-radius: 15px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  font-size: 13px;
+  color: #333;
+  font-family: 'Poppins', sans-serif;
+}
+
+.popup img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+}
+
+.popup-content {
+  padding: 12px 15px;
+}
+
+.popup h3 {
+  margin: 5px 0 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #000;
+}
+
+.popup p {
+  margin: 2px 0 10px;
+  color: #777;
+  font-size: 13px;
+}
+
+.popup button {
+  background-color: #007aff;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.popup button:hover {
+  background-color: #0062cc;
+}
+
+.pin:hover .popup {
+  opacity: 1;
+  visibility: visible;
+  top: -20px;
+}
+
   </style>
 </head>
 <body>
@@ -137,7 +224,25 @@
   </button>
 
   <div class="map-container" id="mapContainer">
-    <img src="phmap.jpg" id="map" alt="Philippines Map">
+    <div class="map-inner" id="mapInner">
+      <img src="phmap.jpg" id="map" alt="Philippines Map">
+
+      <!-- Example Pin -->
+      <div class="pin" style="top: 40%; left: 50%;">
+  <div class="popup">
+      <img src="stair2.jpg" alt="Stairs">
+    <div class="popup-content">
+      <h3>Stairs</h3>
+      <p>Exterior</p>
+      <button onclick="window.location.href='directions.html'">
+        <i class="fa fa-location-arrow"></i> Answer
+      </button>
+    </div>
+  </div>
+</div>
+
+      </div>
+    </div>
   </div>
 
   <div class="zoom-controls">
@@ -150,10 +255,9 @@
     const sidebar = document.getElementById('sidebar');
     const toggleBtn = document.getElementById('toggleBtn');
     const mapContainer = document.getElementById('mapContainer');
-    const map = document.getElementById('map');
+    const mapInner = document.getElementById('mapInner');
     const zoomSlider = document.getElementById('zoomSlider');
 
-    // --- State Variables ---
     let zoom = 1;
     let sidebarOpen = false;
     let isDragging = false;
@@ -164,121 +268,93 @@
     let xOffset = 0;
     let yOffset = 0;
 
-    // --- Boundary Clamping Function ---
     function clamp(val, min, max) {
-        return Math.max(min, Math.min(val, max));
+      return Math.max(min, Math.min(val, max));
     }
 
-    // --- Core Translate Function with Limits ---
     function setTranslate() {
-        // Only apply boundary limits if zoomed in
-        if (zoom > 1) {
-            const containerRect = mapContainer.getBoundingClientRect();
-            const mapRect = map.getBoundingClientRect();
-            
-            // Calculate total draggable area (half the space that overflows the container)
-            const totalDragX = (mapRect.width - containerRect.width) / 2;
-            const totalDragY = (mapRect.height - containerRect.height) / 2;
+      if (zoom > 1) {
+        const containerRect = mapContainer.getBoundingClientRect();
+        const mapRect = mapInner.getBoundingClientRect();
 
-            // Define max and min offsets (panning limits)
-            const minX = -totalDragX;
-            const maxX = totalDragX;
-            const minY = -totalDragY;
-            const maxY = totalDragY;
+        const totalDragX = (mapRect.width - containerRect.width) / 2;
+        const totalDragY = (mapRect.height - containerRect.height) / 2;
 
-            // Clamp the xOffset and yOffset to prevent dragging too far
-            xOffset = clamp(xOffset, minX, maxX);
-            yOffset = clamp(yOffset, minY, maxY);
-        } else {
-            // When zoom is 1, ensure it's centered
-            xOffset = 0;
-            yOffset = 0;
-        }
+        const minX = -totalDragX;
+        const maxX = totalDragX;
+        const minY = -totalDragY;
+        const maxY = totalDragY;
 
-        // Apply the transform
-        map.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0) scale(${zoom})`;
+        xOffset = clamp(xOffset, minX, maxX);
+        yOffset = clamp(yOffset, minY, maxY);
+      } else {
+        xOffset = 0;
+        yOffset = 0;
+      }
+
+      mapInner.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0) scale(${zoom})`;
     }
 
-    // --- Sidebar Toggle ---
     toggleBtn.addEventListener('click', () => {
-        sidebar.classList.toggle('active');
-        sidebarOpen = !sidebarOpen;
-        toggleBtn.innerHTML = sidebarOpen ? '<i class="fa fa-times"></i>' : '<i class="fa fa-bars"></i>';
+      sidebar.classList.toggle('active');
+      sidebarOpen = !sidebarOpen;
+      toggleBtn.innerHTML = sidebarOpen ? '<i class="fa fa-times"></i>' : '<i class="fa fa-bars"></i>';
     });
 
-    // --- Zoom Functionality ---
     zoomSlider.addEventListener('input', () => {
-        zoom = zoomSlider.value;
-        if (zoom <= 1) {
-            xOffset = 0;
-            yOffset = 0;
-        }
-        setTranslate();
+      zoom = zoomSlider.value;
+      if (zoom <= 1) {
+        xOffset = 0;
+        yOffset = 0;
+      }
+      setTranslate();
     });
 
-    // =========================================================================
-    // --- Draggable & Touch Functionality ---
-    // =========================================================================
-
-    // Helper function to get correct X/Y coordinates from mouse or touch event
     function getCoords(e) {
-      // Check for touch event, otherwise use mouse event
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
       return { clientX, clientY };
     }
 
-    // Starts the drag operation (used by both mousedown and touchstart)
     function startDrag(e) {
       if (zoom > 1 && (e.touches ? e.touches.length === 1 : true)) {
-          e.preventDefault(); // Prevent default mobile scrolling/dragging behavior
-          const { clientX, clientY } = getCoords(e);
-          initialX = clientX - xOffset;
-          initialY = clientY - yOffset;
-          isDragging = true;
-          mapContainer.classList.add('dragging');
+        e.preventDefault();
+        const { clientX, clientY } = getCoords(e);
+        initialX = clientX - xOffset;
+        initialY = clientY - yOffset;
+        isDragging = true;
+        mapContainer.classList.add('dragging');
       }
     }
 
-    // Stops the drag operation (used by both mouseup and touchend)
     function endDrag() {
       if (isDragging) {
-          isDragging = false;
-          mapContainer.classList.remove('dragging');
+        isDragging = false;
+        mapContainer.classList.remove('dragging');
       }
     }
 
-    // Handles movement during drag (used by both mousemove and touchmove)
     function moveDrag(e) {
       if (isDragging) {
-          e.preventDefault(); 
-          const { clientX, clientY } = getCoords(e);
-
-          currentX = clientX - initialX;
-          currentY = clientY - initialY;
-
-          xOffset = currentX;
-          yOffset = currentY;
-
-          // setTranslate() applies the offset and enforces the boundaries
-          setTranslate();
+        e.preventDefault();
+        const { clientX, clientY } = getCoords(e);
+        currentX = clientX - initialX;
+        currentY = clientY - initialY;
+        xOffset = currentX;
+        yOffset = currentY;
+        setTranslate();
       }
     }
 
-    // --- Desktop Mouse Listeners ---
     mapContainer.addEventListener('mousedown', startDrag);
     mapContainer.addEventListener('mouseup', endDrag);
     mapContainer.addEventListener('mouseleave', endDrag);
     mapContainer.addEventListener('mousemove', moveDrag);
-
-    // --- Mobile Touch Listeners ---
     mapContainer.addEventListener('touchstart', startDrag);
     mapContainer.addEventListener('touchend', endDrag);
     mapContainer.addEventListener('touchmove', moveDrag);
-    
-    // Initialize the map position
-    setTranslate(); 
-  </script>
 
+    setTranslate();
+  </script>
 </body>
 </html>
