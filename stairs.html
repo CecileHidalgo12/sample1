@@ -15,10 +15,9 @@
       margin: 0;
       height: 100%;
       overflow: hidden;
-      background-color: #87CEEB; /* Sky blue background */
+      background-color: #87CEEB;
     }
 
-    /* --- HEADER BAR --- */
     header {
       position: fixed;
       top: 0;
@@ -36,7 +35,6 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
 
-    /* Move toggle button inside header */
     .toggle-btn {
       position: absolute;
       left: 20px;
@@ -59,7 +57,6 @@
       background-color: #e1f5fe;
     }
 
-    /* Sidebar */
     .sidebar {
       position: fixed;
       top: 0;
@@ -82,7 +79,6 @@
       text-align: center;
     }
 
-    /* Map container */
     .map-container {
       width: 100%;
       height: 100%;
@@ -93,20 +89,21 @@
       position: relative;
       cursor: grab;
       touch-action: none;
-      margin-top: 60px; /* push map below header */
+      margin-top: 60px;
     }
 
     .map-inner {
       position: relative;
       transform-origin: center center;
       transition: transform 0s;
-      width: 1200px;
-      height: auto;
+      width: 100%;
+      height: 100%;
     }
 
     .map-inner img {
       width: 100%;
-      height: auto;
+      height: 100%;
+      object-fit: cover;
       display: block;
       pointer-events: none;
       user-select: none;
@@ -116,7 +113,6 @@
       cursor: grabbing;
     }
 
-    /* Zoom slider */
     .zoom-controls {
       position: fixed;
       bottom: 30px;
@@ -142,7 +138,6 @@
       font-size: 20px;
     }
 
-    /* Pins + Popup */
     .pin {
       position: absolute;
       transform: translate(-50%, -100%);
@@ -151,7 +146,7 @@
     }
 
     .pin::before {
-      content: "\f024"; /* flag icon */
+      content: "\f024";
       font-family: "Font Awesome 6 Free";
       font-weight: 900;
       display: flex;
@@ -167,8 +162,8 @@
     }
 
     .pin.answered::before {
-      content: "\f00c"; /* check icon */
-      background-color: #4CAF50; /* green */
+      content: "\f00c";
+      background-color: #4CAF50;
       color: white;
     }
 
@@ -260,7 +255,67 @@
       background: rgba(0,0,0,0.2);
     }
 
-    /* Responsive popup size for smaller screens */
+    /* --- FORM MODAL --- */
+    .form-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      visibility: hidden;
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 50;
+    }
+
+    .form-modal.active {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .form-content {
+      width: 90%;
+      max-width: 600px;
+      background: white;
+      border-radius: 15px;
+      overflow: hidden;
+      position: relative;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .form-content iframe {
+      width: 100%;
+      height: 500px;
+      border: none;
+    }
+
+    .close-form {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #ddd;
+      border: none;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      font-size: 18px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .close-form:hover {
+      background: #bbb;
+    }
+
+    @keyframes fadeIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
     @media (max-width: 600px) {
       .popup {
         width: 180px;
@@ -289,6 +344,10 @@
         padding: 6px 12px;
         font-size: 11px;
       }
+
+      .form-content iframe {
+        height: 400px;
+      }
     }
   </style>
 </head>
@@ -308,7 +367,6 @@
     <div class="map-inner" id="mapInner">
       <img src="phmap.jpg" id="map" alt="Philippines Map">
 
-      <!-- Example Pin -->
       <div class="pin" style="top: 40%; left: 50%;">
         <div class="popup">
           <button class="close-popup">&times;</button>
@@ -325,10 +383,19 @@
     </div>
   </div>
 
+  <!-- Zoom Slider -->
   <div class="zoom-controls">
     <i class="fa fa-search-minus"></i>
     <input type="range" id="zoomSlider" min="1" max="3" step="0.1" value="1">
     <i class="fa fa-search-plus"></i>
+  </div>
+
+  <!-- GOOGLE FORM MODAL -->
+  <div class="form-modal" id="formModal">
+    <div class="form-content">
+      <button class="close-form" id="closeForm">&times;</button>
+      <iframe src="https://forms.gle/Z7yq2qZhm4DeyJNV8"></iframe>
+    </div>
   </div>
 
   <script>
@@ -337,6 +404,8 @@
     const mapContainer = document.getElementById('mapContainer');
     const mapInner = document.getElementById('mapInner');
     const zoomSlider = document.getElementById('zoomSlider');
+    const formModal = document.getElementById('formModal');
+    const closeForm = document.getElementById('closeForm');
 
     let zoom = 1, sidebarOpen = false, isDragging = false;
     let currentX = 0, currentY = 0, initialX, initialY, xOffset = 0, yOffset = 0;
@@ -397,7 +466,7 @@
     mapContainer.addEventListener('touchend', endDrag);
     mapContainer.addEventListener('touchmove', moveDrag);
 
-    // Tap/click popups
+    // Popup logic
     document.querySelectorAll(".pin").forEach(pin => {
       pin.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -409,30 +478,23 @@
     });
 
     document.addEventListener("click", () => document.querySelectorAll(".popup").forEach(p => p.classList.remove("show")));
-
     document.querySelectorAll(".close-popup").forEach(btn => btn.addEventListener("click", (e) => { e.stopPropagation(); btn.closest(".popup").classList.remove("show"); }));
 
-    // Pinch zoom
-    let initialDistance = 0, lastScale = 1;
-    function getDistance(touches) {
-      const [t1, t2] = touches;
-      return Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
-    }
-    mapContainer.addEventListener('touchstart', (e) => {
-      if (e.touches.length === 2) { e.preventDefault(); initialDistance = getDistance(e.touches); lastScale = zoom; }
-    });
-    mapContainer.addEventListener('touchmove', (e) => {
-      if (e.touches.length === 2) { e.preventDefault(); const newDistance = getDistance(e.touches); zoom = clamp(lastScale * (newDistance / initialDistance), 1, 3); zoomSlider.value = zoom; setTranslate(); }
-    });
-
-    // Answer button logic
+    // Open Google Form modal
     document.querySelectorAll(".answer-btn").forEach(btn => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const pin = btn.closest(".pin");
         pin.classList.add("answered");
         btn.closest(".popup").classList.remove("show");
+        formModal.classList.add("active");
       });
+    });
+
+    // Close Google Form modal
+    closeForm.addEventListener("click", () => formModal.classList.remove("active"));
+    formModal.addEventListener("click", (e) => {
+      if (e.target === formModal) formModal.classList.remove("active");
     });
   </script>
 </body>
