@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Map with Sidebar and Zoom Slider</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    body, html {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background-color: #87CEEB; /* Sky blue background */
+    }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: -250px;
+      width: 250px;
+      height: 100%;
+      background-color: #b3e5fc;
+      transition: left 0.3s ease;
+      padding: 20px;
+      box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+      z-index: 10;
+    }
+
+    .sidebar.active {
+      left: 0;
+    }
+
+    .sidebar h2 {
+      color: #01579b;
+      text-align: center;
+    }
+
+    /* Toggle Button */
+    .toggle-btn {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background-color: #0288d1;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 45px;
+      height: 45px;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      z-index: 11;
+      transition: background 0.3s ease;
+    }
+
+    .toggle-btn:hover {
+      background-color: #0277bd;
+    }
+
+    /* Map container */
+    .map-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      position: relative;
+      /* Cursor for desktop */
+      cursor: grab;
+      /* Disable default touch actions to prevent conflicts */
+      touch-action: none; 
+    }
+
+    .map-container img {
+      transition: transform 0.0s;
+      width: 100%;
+      height: 100%;
+      object-fit: contain; 
+      user-drag: none;
+      -webkit-user-drag: none;
+      user-select: none;
+      -moz-user-select: none;
+      -webkit-user-select: none;
+      -ms-user-select: none;
+    }
+  
+    .map-container.dragging {
+      cursor: grabbing;
+    }
+
+    /* Zoom slider */
+    .zoom-controls {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(255, 255, 255, 0.8);
+      border-radius: 20px;
+      padding: 10px 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 10;
+    }
+
+    .zoom-controls input[type="range"] {
+      width: 200px;
+      accent-color: #0288d1;
+    }
+
+    .zoom-controls i {
+      color: #0288d1;
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar" id="sidebar">
+    <h2>Sidebar Menu</h2>
+    <p>You can put options or information here.</p>
+  </div>
+
+  <button class="toggle-btn" id="toggleBtn">
+    <i class="fa fa-bars"></i>
+  </button>
+
+  <div class="map-container" id="mapContainer">
+    <img src="phmap.jpg" id="map" alt="Philippines Map">
+  </div>
+
+  <div class="zoom-controls">
+    <i class="fa fa-search-minus"></i>
+    <input type="range" id="zoomSlider" min="1" max="3" step="0.1" value="1">
+    <i class="fa fa-search-plus"></i>
+  </div>
+
+  <script>
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('toggleBtn');
+    const mapContainer = document.getElementById('mapContainer');
+    const map = document.getElementById('map');
+    const zoomSlider = document.getElementById('zoomSlider');
+
+    // --- State Variables ---
+    let zoom = 1;
+    let sidebarOpen = false;
+    let isDragging = false;
+    let currentX = 0;
+    let currentY = 0;
+    let initialX;
+    let initialY;
+    let xOffset = 0;
+    let yOffset = 0;
+
+    // --- Boundary Clamping Function ---
+    function clamp(val, min, max) {
+        return Math.max(min, Math.min(val, max));
+    }
+
+    // --- Core Translate Function with Limits ---
+    function setTranslate() {
+        // Only apply boundary limits if zoomed in
+        if (zoom > 1) {
+            const containerRect = mapContainer.getBoundingClientRect();
+            const mapRect = map.getBoundingClientRect();
+            
+            // Calculate total draggable area (half the space that overflows the container)
+            const totalDragX = (mapRect.width - containerRect.width) / 2;
+            const totalDragY = (mapRect.height - containerRect.height) / 2;
+
+            // Define max and min offsets (panning limits)
+            const minX = -totalDragX;
+            const maxX = totalDragX;
+            const minY = -totalDragY;
+            const maxY = totalDragY;
+
+            // Clamp the xOffset and yOffset to prevent dragging too far
+            xOffset = clamp(xOffset, minX, maxX);
+            yOffset = clamp(yOffset, minY, maxY);
+        } else {
+            // When zoom is 1, ensure it's centered
+            xOffset = 0;
+            yOffset = 0;
+        }
+
+        // Apply the transform
+        map.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0) scale(${zoom})`;
+    }
+
+    // --- Sidebar Toggle ---
+    toggleBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('active');
+        sidebarOpen = !sidebarOpen;
+        toggleBtn.innerHTML = sidebarOpen ? '<i class="fa fa-times"></i>' : '<i class="fa fa-bars"></i>';
+    });
+
+    // --- Zoom Functionality ---
+    zoomSlider.addEventListener('input', () => {
+        zoom = zoomSlider.value;
+        if (zoom <= 1) {
+            xOffset = 0;
+            yOffset = 0;
+        }
+        setTranslate();
+    });
+
+    // =========================================================================
+    // --- Draggable & Touch Functionality ---
+    // =========================================================================
+
+    // Helper function to get correct X/Y coordinates from mouse or touch event
+    function getCoords(e) {
+      // Check for touch event, otherwise use mouse event
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return { clientX, clientY };
+    }
+
+    // Starts the drag operation (used by both mousedown and touchstart)
+    function startDrag(e) {
+      if (zoom > 1 && (e.touches ? e.touches.length === 1 : true)) {
+          e.preventDefault(); // Prevent default mobile scrolling/dragging behavior
+          const { clientX, clientY } = getCoords(e);
+          initialX = clientX - xOffset;
+          initialY = clientY - yOffset;
+          isDragging = true;
+          mapContainer.classList.add('dragging');
+      }
+    }
+
+    // Stops the drag operation (used by both mouseup and touchend)
+    function endDrag() {
+      if (isDragging) {
+          isDragging = false;
+          mapContainer.classList.remove('dragging');
+      }
+    }
+
+    // Handles movement during drag (used by both mousemove and touchmove)
+    function moveDrag(e) {
+      if (isDragging) {
+          e.preventDefault(); 
+          const { clientX, clientY } = getCoords(e);
+
+          currentX = clientX - initialX;
+          currentY = clientY - initialY;
+
+          xOffset = currentX;
+          yOffset = currentY;
+
+          // setTranslate() applies the offset and enforces the boundaries
+          setTranslate();
+      }
+    }
+
+    // --- Desktop Mouse Listeners ---
+    mapContainer.addEventListener('mousedown', startDrag);
+    mapContainer.addEventListener('mouseup', endDrag);
+    mapContainer.addEventListener('mouseleave', endDrag);
+    mapContainer.addEventListener('mousemove', moveDrag);
+
+    // --- Mobile Touch Listeners ---
+    mapContainer.addEventListener('touchstart', startDrag);
+    mapContainer.addEventListener('touchend', endDrag);
+    mapContainer.addEventListener('touchmove', moveDrag);
+    
+    // Initialize the map position
+    setTranslate(); 
+  </script>
+
+</body>
+</html>
