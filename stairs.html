@@ -441,6 +441,37 @@
         btn.closest(".popup").classList.remove("show");
       });
     });
+    // --- Pinch zoom support for touchscreens ---
+let initialDistance = 0;
+let lastScale = 1;
+
+function getDistance(touches) {
+  const [touch1, touch2] = touches;
+  const dx = touch1.clientX - touch2.clientX;
+  const dy = touch1.clientY - touch2.clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+mapContainer.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    initialDistance = getDistance(e.touches);
+    lastScale = zoom;
+  }
+});
+
+mapContainer.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    const newDistance = getDistance(e.touches);
+    const scaleChange = newDistance / initialDistance;
+    zoom = clamp(lastScale * scaleChange, 1, 3); // Keep within slider limits
+    zoomSlider.value = zoom;
+    setTranslate();
+  }
+});
+
   </script>
 </body>
 </html>
+
