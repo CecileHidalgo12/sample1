@@ -216,17 +216,21 @@ mapContainer.addEventListener('touchend',endDrag);
 
 const formBaseURL='https://docs.google.com/forms/d/e/1FAIpQLSch3JvOiWKwVYo0wWoQsSoBGtY6jZx1i2JLpZfdYvViT3Z-FA/viewform';
 const prefillField='entry.674587731';
-function freshFormURL(prefill){
-  const t=Date.now();
-  let url=`${formBaseURL}?t=${t}&embedded=true&usp=pp_url`;
-  if(prefill) url+=`&${prefillField}=${encodeURIComponent(prefill)}`;
+function freshFormURL(){
+  const t = Date.now();
+  let url = `${formBaseURL}?t=${t}&embedded=true&usp=pp_url`;
+
+  // include userId in the prefilled field instead of the location label
+  if (userId) {
+    url += `&${prefillField}=${encodeURIComponent(userId)}`;
+  }
   return url;
 }
 let watchInterval=null;
 function openFormForPin(pin){
   pin.dataset.activePin='true';
   const label=pin.dataset.prefill||'Unknown';
-  formIframe.src=freshFormURL(label);
+  formIframe.src = freshFormURL();
   formModal.classList.add('active');
   clearInterval(watchInterval);
   watchInterval=setInterval(()=>{
