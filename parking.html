@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Stairs</title>
+</head>
+<body>
+    <h1>Parking Page</h1>
+    <p>This is where you put your content/questions for parking observation.</p>
+
+    <button onclick="goNext()">Next</button>
+
+    <script>
+        function goNext() {
+            let selectedSpaces = JSON.parse(localStorage.getItem("selectedSpaces"));
+            selectedSpaces.shift(); // remove "stairs"
+
+            if (selectedSpaces.length === 0) {
+                alert("Finished all selected spaces!");
+                localStorage.removeItem("selectedSpaces");
+                window.location.href = "pha_checklist.html"; // back to start or thank-you page
+            } else {
+                localStorage.setItem("selectedSpaces", JSON.stringify(selectedSpaces));
+                window.location.href = selectedSpaces[0] + ".html";
+            }
+        }
+    </script>
+</body>
+</html>
