@@ -256,7 +256,7 @@ iframe {
   </div>
 </div>
 
-<!-- Pre-Question Modal -->
+<!-- ✅ Pre-Question Modal -->
 <div id="preModal" class="modal">
   <div class="modal-content">
     <span class="close-btn" onclick="closeModal('preModal')">&times;</span>
@@ -271,7 +271,7 @@ iframe {
   </div>
 </div>
 
-<!-- First Google Form Modal -->
+<!-- ✅ First Google Form Modal -->
 <div id="gformModal" class="modal">
   <div class="modal-content">
     <span class="close-btn" onclick="closeModal('gformModal')">&times;</span>
@@ -286,7 +286,7 @@ iframe {
       <input type="email" name="entry.1250732240" placeholder="Your Email" required>
       <input type="text" id="userIdField" name="entry.100520172" placeholder="User ID" readonly>
       <label> 
-        <input type="checkbox" id="consentCheckbox" required>
+        <input type="checkbox" id="consentCheckbox" name="consent" required>
         I agree that my responses will be used only for research purposes.
       </label>
       <button class="submit-btn" type="submit">Submit</button>
@@ -295,7 +295,7 @@ iframe {
   </div>
 </div>
 
-<!-- Second Google Form Modal -->
+<!-- ✅ Second Google Form Modal -->
 <div id="secondFormModal" class="modal">
   <div class="modal-content">
     <span class="close-btn" onclick="closeModal('secondFormModal')">&times;</span>
@@ -305,30 +305,42 @@ iframe {
   </div>
 </div>
 
-<!-- ✅ Third Form Modal -->
+<!-- ✅ Third Form Modal (Fixed Version) -->
 <div id="thirdFormModal" class="modal">
   <div class="modal-content">
     <span class="close-btn" onclick="closeModal('thirdFormModal')">&times;</span>
     <h2>Rate Your Experience</h2>
     <form id="thirdForm" method="POST" target="hidden_iframe3" action="https://docs.google.com/forms/d/e/1FAIpQLSf6CJbfia5D8A0dpcT_luc6sRtYwpoZSfQSCc26ZFsb8JPnAg/formResponse">
-      <label>1️⃣ Rate the Venue (1-5):
+      <label>1️⃣ Rate the Venue (1–5):
         <select name="entry.943419166" required>
           <option value="" disabled selected>Select rating</option>
-          <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
         </select>
       </label>
 
-      <label>2️⃣ Rate the Sound System (1-5):
+      <label>2️⃣ Rate the Sound System (1–5):
         <select name="entry.1595958130" required>
           <option value="" disabled selected>Select rating</option>
-          <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
         </select>
       </label>
 
-      <label>3️⃣ Rate the Comfort (1-5):
+      <label>3️⃣ Rate the Comfort (1–5):
         <select name="entry.100883318" required>
           <option value="" disabled selected>Select rating</option>
-          <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
         </select>
       </label>
 
@@ -359,7 +371,6 @@ function openPreModal(arena) {
 document.getElementById("preForm").addEventListener("submit", function(e) {
   e.preventDefault();
   const role = document.querySelector('input[name="role"]:checked').value;
-
   if (role === "fan") {
     closeModal("preModal");
     openModal(selectedArena);
@@ -397,7 +408,6 @@ document.getElementById("hidden_iframe").addEventListener("load", () => {
 // ✅ After second form done
 document.getElementById("doneButton").addEventListener("click", function() {
   closeModal("secondFormModal");
-  // Open the third modal
   document.getElementById("thirdFormModal").style.display = "flex";
 });
 
