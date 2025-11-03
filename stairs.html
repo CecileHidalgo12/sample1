@@ -1,502 +1,329 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Map with Sidebar and Zoom Slider</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <style>
-    * {
-      box-sizing: border-box;
-      font-family: 'Poppins', sans-serif;
-    }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Map with Sidebar and Zoom Slider</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<style>
+  *{box-sizing:border-box;font-family:"Poppins",sans-serif}
+  html,body{height:100%;margin:0;background:#87ceeb;overflow:hidden}
 
-    body, html {
-      margin: 0;
-      height: 100%;
-      overflow: hidden;
-      background-color: #87CEEB;
-    }
+  header{
+    position:fixed;top:0;left:0;width:100%;height:60px;
+    background:linear-gradient(to right,#0288d1,#4fc3f7);
+    display:flex;align-items:center;justify-content:center;color:#fff;
+    font-size:20px;font-weight:600;z-index:120;box-shadow:0 2px 5px rgba(0,0,0,.2)
+  }
+  .toggle-btn{position:absolute;left:20px;background:#fff;color:#0288d1;border:0;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,.2)}
+  .next-btn{position:absolute;right:20px;background:#fff;color:#0288d1;border:0;border-radius:20px;padding:8px 14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 2px 4px rgba(0,0,0,.2)}
 
-    header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 60px;
-      background: linear-gradient(to right, #0288d1, #4fc3f7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 20px;
-      font-weight: 600;
-      z-index: 12;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }
+  .sidebar{position:fixed;top:0;left:-250px;width:250px;height:100%;background:#b3e5fc;padding:20px;transition:left .28s;box-shadow:2px 0 5px rgba(0,0,0,.2);z-index:110}
+  .sidebar.active{left:0}
 
-    .toggle-btn {
-      position: absolute;
-      left: 20px;
-      background-color: white;
-      color: #0288d1;
-      border: none;
-      border-radius: 50%;
-      width: 42px;
-      height: 42px;
-      cursor: pointer;
-      font-size: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-      transition: background 0.3s ease;
-    }
+  /* map area sits below header */
+  .map-container{
+    position:relative;width:100%;height:calc(100vh - 60px);top:60px;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;
+    touch-action:none;cursor:grab;z-index:20;
+  }
 
-    .toggle-btn:hover {
-      background-color: #e1f5fe;
-    }
+  /* map-inner is the visual map area with a background image */
+  .map-inner{
+    position:relative;
+    width:100%;
+    max-width:1600px;
+    aspect-ratio:3509/2480;
+    background-image:url('phmap.jpg');
+    background-size:contain;
+    background-position:center;
+    background-repeat:no-repeat;
+    transform-origin:center center;
+    overflow:visible;
+    will-change:transform;
+    z-index:10001;
+  }
 
-    .sidebar {
-      position: fixed;
-      top: 0;
-      left: -250px;
-      width: 250px;
-      height: 100%;
-      background-color: #b3e5fc;
-      transition: left 0.3s ease;
-      padding: 20px;
-      box-shadow: 2px 0 5px rgba(0,0,0,0.2);
-      z-index: 11;
-    }
+  .map-inner:before{
+    content:"";display:block;padding-top:calc(2480/3509*100%);width:100%;height:0;visibility:hidden
+  }
 
-    .sidebar.active {
-      left: 0;
-    }
+  /* pins positioned absolutely inside map-inner */
+  .pin{position:absolute;transform:translate(-50%,-100%);cursor:pointer;z-index:2}
+  .pin::before{
+    content:"\f024";font-family:"Font Awesome 6 Free";font-weight:900;
+    display:flex;align-items:center;justify-content:center;
+    background:#00bcd4;color:#fff;font-size:10px;width:18px;height:18px;border-radius:50%;
+    box-shadow:0 3px 6px rgba(0,0,0,.25)
+  }
+  .pin.answered::before{background:#4caf50}
 
-    .sidebar h2 {
-      color: #01579b;
-      text-align: center;
-    }
+  /* popup */
+  .popup{position:absolute;top:50%;right:calc(100% + 8px);transform:translateY(-50%);width:140px;background:#fff;border-radius:10px;box-shadow:0 3px 6px rgba(0,0,0,.2);opacity:0;visibility:hidden;transition:all .28s;color:#333;pointer-events:none;z-index:9999}
+  .pin .popup{transform-origin:center right;transform:translateY(-50%) scale(calc(1 / var(--zoom,1)))}
+  .pin:hover .popup,.pin.clicked .popup{opacity:1;visibility:visible;pointer-events:auto}
+  .popup img{width:100%;height:65px;object-fit:cover}
+  .popup-content{padding:6px 8px}
+  .popup h3{margin:2px 0 0;font-size:12px;font-weight:600}
+  .popup p{margin:0 0 6px;color:#777;font-size:10px}
+  .popup button{background:#007aff;color:#fff;border:0;border-radius:12px;padding:4px 8px;font-size:10px;cursor:pointer}
+  .popup button:hover{background:#0062cc}
 
-    .map-container {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      overflow: hidden;
-      position: relative;
-      cursor: grab;
-      touch-action: none;
-      margin-top: 60px;
-    }
+  /* FIXED: Form modal now sits below the header and scales properly */
+  .form-modal{
+    position:fixed;
+    top:60px; /* push below header */
+    left:0;
+    width:100%;
+    height:calc(100% - 60px);
+    background:rgba(0,0,0,.6);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    visibility:hidden;
+    opacity:0;
+    transition:all .28s;
+    z-index:200; /* above header */
+  }
+  .form-modal.active{visibility:visible;opacity:1}
+  .form-content{
+    width:90%;
+    max-width:500px;
+    max-height:90%;
+    background:#fff;
+    border-radius:12px;
+    overflow:hidden;
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    animation:fadeIn .25s;
+  }
+  .form-content iframe{
+    width:100%;
+    height:400px;
+    border:0;
+  }
+  .close-form{
+    position:absolute;top:10px;right:10px;width:28px;height:28px;border-radius:50%;border:0;background:#ddd;cursor:pointer
+  }
+  .done-btn{margin:10px 0 15px;background:#4caf50;color:#fff;border:0;border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer}
 
-    .map-inner {
-      position: relative;
-      transform-origin: center center;
-      transition: transform 0s;
-      width: 100%;
-      height: 100%;
-    }
+  .zoom-controls{position:fixed;right:20px;bottom:20px;background:rgba(255,255,255,.9);padding:8px 12px;border-radius:20px;display:flex;gap:8px;align-items:center;z-index:30}
 
-    .map-inner img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-      pointer-events: none;
-      user-select: none;
-    }
-
-    .map-container.dragging {
-      cursor: grabbing;
-    }
-
-    .zoom-controls {
-      position: fixed;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: rgba(255, 255, 255, 0.8);
-      border-radius: 20px;
-      padding: 10px 20px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      z-index: 10;
-    }
-
-    .zoom-controls input[type="range"] {
-      width: 200px;
-      accent-color: #0288d1;
-    }
-
-    .zoom-controls i {
-      color: #0288d1;
-      font-size: 20px;
-    }
-
-    .pin {
-      position: absolute;
-      transform: translate(-50%, -100%);
-      cursor: pointer;
-      z-index: 5;
-    }
-
-    .pin::before {
-      content: "\f024";
-      font-family: "Font Awesome 6 Free";
-      font-weight: 900;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: #00BCD4;
-      color: white;
-      font-size: 14px;
-      width: 25px;
-      height: 25px;
-      border-radius: 50%;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-    }
-
-    .pin.answered::before {
-      content: "\f00c";
-      background-color: #4CAF50;
-      color: white;
-    }
-
-    .popup {
-      position: absolute;
-      top: -10px;
-      left: 35px;
-      width: 260px;
-      background: #fff;
-      border-radius: 15px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      overflow: hidden;
-      opacity: 0;
-      visibility: hidden;
-      transition: all 0.3s ease;
-      font-size: 13px;
-      color: #333;
-    }
-
-    .popup img {
-      width: 100%;
-      height: 140px;
-      object-fit: cover;
-    }
-
-    .popup-content {
-      padding: 12px 15px;
-    }
-
-    .popup h3 {
-      margin: 5px 0 0;
-      font-size: 16px;
-      font-weight: 600;
-    }
-
-    .popup p {
-      margin: 2px 0 10px;
-      color: #777;
-      font-size: 13px;
-    }
-
-    .popup button {
-      background-color: #007aff;
-      color: white;
-      border: none;
-      border-radius: 20px;
-      padding: 8px 16px;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background 0.3s ease;
-    }
-
-    .popup button:hover {
-      background-color: #0062cc;
-    }
-
-    .pin:hover .popup {
-      opacity: 1;
-      visibility: visible;
-      top: -20px;
-    }
-
-    .popup.show {
-      opacity: 1;
-      visibility: visible;
-      top: -20px;
-    }
-
-    .popup .close-popup {
-      position: absolute;
-      top: 6px;
-      right: 8px;
-      background: rgba(0,0,0,0.1);
-      border: none;
-      color: #333;
-      font-size: 16px;
-      font-weight: bold;
-      border-radius: 50%;
-      width: 22px;
-      height: 22px;
-      line-height: 18px;
-      cursor: pointer;
-      transition: background 0.3s;
-      z-index: 2;
-    }
-
-    .popup .close-popup:hover {
-      background: rgba(0,0,0,0.2);
-    }
-
-    /* --- FORM MODAL --- */
-    .form-modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.6);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      visibility: hidden;
-      opacity: 0;
-      transition: all 0.3s ease;
-      z-index: 50;
-    }
-
-    .form-modal.active {
-      visibility: visible;
-      opacity: 1;
-    }
-
-    .form-content {
-      width: 90%;
-      max-width: 600px;
-      background: white;
-      border-radius: 15px;
-      overflow: hidden;
-      position: relative;
-      animation: fadeIn 0.3s ease;
-    }
-
-    .form-content iframe {
-      width: 100%;
-      height: 500px;
-      border: none;
-    }
-
-    .close-form {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: #ddd;
-      border: none;
-      border-radius: 50%;
-      width: 28px;
-      height: 28px;
-      font-size: 18px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    .close-form:hover {
-      background: #bbb;
-    }
-
-    @keyframes fadeIn {
-      from { transform: scale(0.9); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
-    }
-
-    @media (max-width: 600px) {
-      .popup {
-        width: 180px;
-        top: -5px;
-        left: 28px;
-        font-size: 11px;
-      }
-
-      .popup img {
-        height: 90px;
-      }
-
-      .popup-content {
-        padding: 8px 10px;
-      }
-
-      .popup h3 {
-        font-size: 13px;
-      }
-
-      .popup p {
-        font-size: 11px;
-      }
-
-      .popup button {
-        padding: 6px 12px;
-        font-size: 11px;
-      }
-
-      .form-content iframe {
-        height: 400px;
-      }
-    }
-  </style>
+  @keyframes fadeIn{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+</style>
 </head>
 <body>
+<header>
+  <button id="toggleBtn" class="toggle-btn"><i class="fa fa-bars"></i></button>
+  Exterior Stairs
+  <button id="nextBtn" class="next-btn">Next <i class="fa fa-arrow-right"></i></button>
+</header>
 
-  <header>
-    <button class="toggle-btn" id="toggleBtn"><i class="fa fa-bars"></i></button>
-    change 1
-  </header>
+<div id="sidebar" class="sidebar"><h2>Sidebar Menu</h2><p>Options here</p></div>
 
-  <div class="sidebar" id="sidebar">
-    <h2>Sidebar Menu</h2>
-    <p>You can put options or information here.</p>
-  </div>
+<div id="mapContainer" class="map-container">
+  <div id="mapInner" class="map-inner">
+    <div class="pin" data-x="2300" data-y="1105" data-prefill="Stairs">
+      <div class="popup">
+        <img src="stair2.jpg" alt="Stairs"/>
+        <div class="popup-content"><h3>Stairs</h3><p>Exterior</p><button class="answer-btn"><i class="fa fa-location-arrow"></i> Answer</button></div>
+      </div>
+    </div>
 
-  <div class="map-container" id="mapContainer">
-    <div class="map-inner" id="mapInner">
-      <img src="phmap.jpg" id="map" alt="Philippines Map">
+    <div class="pin" data-x="2740" data-y="1105" data-prefill="Lobby">
+      <div class="popup">
+        <img src="stair2.jpg" alt="Lobby"/>
+        <div class="popup-content"><h3>Lobby</h3><p>Main Area</p><button class="answer-btn"><i class="fa fa-location-arrow"></i> Answer</button></div>
+      </div>
+    </div>
 
-      <div class="pin" style="top: 40%; left: 50%;">
-        <div class="popup">
-          <button class="close-popup">&times;</button>
-          <img src="stair2.jpg" alt="Stairs">
-          <div class="popup-content">
-            <h3>Stairs</h3>
-            <p>Exterior</p>
-            <button class="answer-btn">
-              <i class="fa fa-location-arrow"></i> Answer
-            </button>
-          </div>
-        </div>
+    <div class="pin" data-x="2507" data-y="1250" data-prefill="Hallway">
+      <div class="popup">
+        <img src="stair2.jpg" alt="Hallway"/>
+        <div class="popup-content"><h3>Hallway</h3><p>Interior</p><button class="answer-btn"><i class="fa fa-location-arrow"></i> Answer</button></div>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Zoom Slider -->
-  <div class="zoom-controls">
-    <i class="fa fa-search-minus"></i>
-    <input type="range" id="zoomSlider" min="1" max="3" step="0.1" value="1">
-    <i class="fa fa-search-plus"></i>
+<div class="zoom-controls">
+  <i class="fa fa-search-minus"></i>
+  <input id="zoomSlider" type="range" min="1" max="3" step="0.1" value="1"/>
+  <i class="fa fa-search-plus"></i>
+</div>
+
+<div id="formModal" class="form-modal">
+  <div class="form-content">
+    <button id="closeForm" class="close-form">&times;</button>
+    <iframe src=""></iframe>
+    <button id="doneBtn" class="done-btn">I am done</button>
   </div>
+</div>
 
-  <!-- GOOGLE FORM MODAL -->
-  <div class="form-modal" id="formModal">
-    <div class="form-content">
-      <button class="close-form" id="closeForm">&times;</button>
-      <iframe src="https://forms.gle/Z7yq2qZhm4DeyJNV8"></iframe>
-    </div>
-  </div>
+<script>
+const mapInner=document.getElementById('mapInner');
+const mapContainer=document.getElementById('mapContainer');
+const pins=document.querySelectorAll('.pin');
+const zoomSlider=document.getElementById('zoomSlider');
+const formModal=document.getElementById('formModal');
+const formIframe=formModal.querySelector('iframe');
+const doneBtn=document.getElementById('doneBtn');
+const closeForm=document.getElementById('closeForm');
+const toggleBtn=document.getElementById('toggleBtn');
+const sidebar=document.getElementById('sidebar');
 
-  <script>
-    const sidebar = document.getElementById('sidebar');
-    const toggleBtn = document.getElementById('toggleBtn');
-    const mapContainer = document.getElementById('mapContainer');
-    const mapInner = document.getElementById('mapInner');
-    const zoomSlider = document.getElementById('zoomSlider');
-    const formModal = document.getElementById('formModal');
-    const closeForm = document.getElementById('closeForm');
+const IMG_W=3509, IMG_H=2480;
+function dbg(...args){console.log('[map-debug]',...args)}
+const params = new URLSearchParams(window.location.search);
+const userId = params.get("userId");
+console.log("User ID:", userId);
+function positionPins(){
+  const w=mapInner.clientWidth,h=mapInner.clientHeight;
+  pins.forEach(pin=>{
+    const x=parseFloat(pin.dataset.x),y=parseFloat(pin.dataset.y);
+    const leftPct=(x/IMG_W)*100,topPct=(y/IMG_H)*100;
+    pin.style.left=`${leftPct}%`;
+    pin.style.top=`${topPct}%`;
+  });
+}
+window.addEventListener('load',positionPins);
+window.addEventListener('resize',positionPins);
+window.addEventListener('orientationchange',positionPins);
 
-    let zoom = 1, sidebarOpen = false, isDragging = false;
-    let currentX = 0, currentY = 0, initialX, initialY, xOffset = 0, yOffset = 0;
+let zoom=1,isDragging=false,startX=0,startY=0,offsetX=0,offsetY=0;
+function setTransform(){
+  mapInner.style.transform=`translate3d(${offsetX}px,${offsetY}px,0) scale(${zoom})`;
+  mapInner.style.setProperty('--zoom',zoom);
+}
+zoomSlider.addEventListener('input',()=>{
+  zoom=parseFloat(zoomSlider.value);
+  if(zoom<=1){offsetX=0;offsetY=0;}
+  setTransform();
+});
+function getCoords(e){return e.touches?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY}}
+function startDrag(e){if(zoom<=1)return;const c=getCoords(e);isDragging=true;startX=c.x-offsetX;startY=c.y-offsetY;mapContainer.style.cursor='grabbing'}
+function moveDrag(e){if(!isDragging)return;const c=getCoords(e);offsetX=c.x-startX;offsetY=c.y-startY;setTransform()}
+function endDrag(){isDragging=false;mapContainer.style.cursor='grab'}
+mapContainer.addEventListener('mousedown',startDrag);
+mapContainer.addEventListener('mousemove',moveDrag);
+mapContainer.addEventListener('mouseup',endDrag);
+mapContainer.addEventListener('mouseleave',endDrag);
+mapContainer.addEventListener('touchstart',startDrag,{passive:false});
+mapContainer.addEventListener('touchmove',moveDrag,{passive:false});
+mapContainer.addEventListener('touchend',endDrag);
 
-    function clamp(val, min, max) { return Math.max(min, Math.min(val, max)); }
-
-    function setTranslate() {
-      if (zoom > 1) {
-        const containerRect = mapContainer.getBoundingClientRect();
-        const mapRect = mapInner.getBoundingClientRect();
-        const totalDragX = (mapRect.width - containerRect.width) / 2;
-        const totalDragY = (mapRect.height - containerRect.height) / 2;
-        xOffset = clamp(xOffset, -totalDragX, totalDragX);
-        yOffset = clamp(yOffset, -totalDragY, totalDragY);
-      } else { xOffset = 0; yOffset = 0; }
-      mapInner.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0) scale(${zoom})`;
-    }
-
-    toggleBtn.addEventListener('click', () => {
-      sidebar.classList.toggle('active');
-      sidebarOpen = !sidebarOpen;
-      toggleBtn.innerHTML = sidebarOpen ? '<i class="fa fa-times"></i>' : '<i class="fa fa-bars"></i>';
-    });
-
-    zoomSlider.addEventListener('input', () => { zoom = zoomSlider.value; if (zoom <= 1) { xOffset = 0; yOffset = 0; } setTranslate(); });
-
-    function getCoords(e) {
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      return { clientX, clientY };
-    }
-
-    function startDrag(e) {
-      if (zoom > 1 && (e.touches ? e.touches.length === 1 : true)) {
-        e.preventDefault();
-        const { clientX, clientY } = getCoords(e);
-        initialX = clientX - xOffset; initialY = clientY - yOffset;
-        isDragging = true; mapContainer.classList.add('dragging');
+const formBaseURL='https://docs.google.com/forms/d/e/1FAIpQLSch3JvOiWKwVYo0wWoQsSoBGtY6jZx1i2JLpZfdYvViT3Z-FA/viewform';
+const prefillField='entry.674587731';
+function freshFormURL(prefill){
+  const t=Date.now();
+  let url=`${formBaseURL}?t=${t}&embedded=true&usp=pp_url`;
+  if(prefill) url+=`&${prefillField}=${encodeURIComponent(prefill)}`;
+  return url;
+}
+let watchInterval=null;
+function openFormForPin(pin){
+  pin.dataset.activePin='true';
+  const label=pin.dataset.prefill||'Unknown';
+  formIframe.src=freshFormURL(label);
+  formModal.classList.add('active');
+  clearInterval(watchInterval);
+  watchInterval=setInterval(()=>{
+    try{
+      const href=formIframe.contentWindow.location.href;
+      if(href && href.includes('formResponse')){
+        markPinAnswered(label);
+        clearInterval(watchInterval);
+        setTimeout(()=>{formModal.classList.remove('active');formIframe.src='';},800);
       }
+    }catch(e){}
+  },800);
+}
+document.querySelectorAll('.answer-btn').forEach(btn=>{
+  btn.addEventListener('click',e=>{
+    e.stopPropagation();
+    const pin=e.target.closest('.pin');
+    if(!pin)return;
+    openFormForPin(pin);
+  });
+});
+pins.forEach(pin=>{
+  pin.addEventListener('click',e=>{
+    if(e.target.closest('.answer-btn'))return;
+    e.stopPropagation();
+    pins.forEach(p=>{if(p!==pin)p.classList.remove('clicked')});
+    pin.classList.toggle('clicked');
+  });
+});
+document.addEventListener('click',()=>pins.forEach(p=>p.classList.remove('clicked')));
+
+function loadAnsweredPins(){
+  const answered=JSON.parse(localStorage.getItem('answeredPins')||'[]');
+  answered.forEach(label=>{
+    const p=document.querySelector(`.pin[data-prefill="${label}"]`);
+    if(p)p.classList.add('answered');
+  });
+}
+function markPinAnswered(label){
+  if(!label)return;
+  const arr=JSON.parse(localStorage.getItem('answeredPins')||'[]');
+  if(!arr.includes(label))arr.push(label);
+  localStorage.setItem('answeredPins',JSON.stringify(arr));
+  const p=document.querySelector(`.pin[data-prefill="${label}"]`);
+  if(p)p.classList.add('answered');
+}
+loadAnsweredPins();
+
+doneBtn.addEventListener('click',()=>{
+  const active=document.querySelector('[data-active-pin="true"]');
+  if(active){
+    const label=active.dataset.prefill||'Unknown';
+    markPinAnswered(label);
+    delete active.dataset.activePin;
+  }
+  clearInterval(watchInterval);
+  formModal.classList.remove('active');
+  formIframe.src='';
+});
+closeForm.addEventListener('click',()=>{
+  clearInterval(watchInterval);
+  const active=document.querySelector('[data-active-pin="true"]');
+  if(active)delete active.dataset.activePin;
+  formModal.classList.remove('active');
+  formIframe.src='';
+});
+formModal.addEventListener('click',ev=>{if(ev.target===formModal)closeForm.click()});
+toggleBtn.addEventListener('click',()=>{
+  sidebar.classList.toggle('active');
+  toggleBtn.innerHTML=sidebar.classList.contains('active')?'<i class="fa fa-times"></i>':'<i class="fa fa-bars"></i>';
+});
+// --- Navigation between selected pages ---
+document.getElementById("nextBtn").addEventListener("click", () => {
+  const selectedPages = JSON.parse(localStorage.getItem("selectedPages") || "[]");
+  let currentIndex = parseInt(localStorage.getItem("currentPageIndex") || "0", 10);
+
+  if (currentIndex < selectedPages.length - 1) {
+    currentIndex++;
+    localStorage.setItem("currentPageIndex", currentIndex.toString());
+
+    const nextPage = selectedPages[currentIndex];
+    if (nextPage) {
+      const params = new URLSearchParams(window.location.search);
+      const userId = params.get("userId");
+      const nextUrl = userId
+        ? `${nextPage}?userId=${encodeURIComponent(userId)}`
+        : nextPage;
+
+      window.location.href = nextUrl;
     }
+  } else {
+    alert("✅ You’ve completed all selected areas!");
+    localStorage.removeItem("selectedPages");
+    localStorage.removeItem("currentPageIndex");
+  }
+});
 
-    function endDrag() { if (isDragging) { isDragging = false; mapContainer.classList.remove('dragging'); } }
-
-    function moveDrag(e) {
-      if (isDragging) {
-        e.preventDefault();
-        const { clientX, clientY } = getCoords(e);
-        xOffset = clientX - initialX; yOffset = clientY - initialY;
-        setTranslate();
-      }
-    }
-
-    mapContainer.addEventListener('mousedown', startDrag);
-    mapContainer.addEventListener('mouseup', endDrag);
-    mapContainer.addEventListener('mouseleave', endDrag);
-    mapContainer.addEventListener('mousemove', moveDrag);
-    mapContainer.addEventListener('touchstart', startDrag);
-    mapContainer.addEventListener('touchend', endDrag);
-    mapContainer.addEventListener('touchmove', moveDrag);
-
-    // Popup logic
-    document.querySelectorAll(".pin").forEach(pin => {
-      pin.addEventListener("click", (e) => {
-        e.stopPropagation();
-        document.querySelectorAll(".popup").forEach(p => {
-          if (p !== pin.querySelector(".popup")) p.classList.remove("show");
-        });
-        pin.querySelector(".popup").classList.toggle("show");
-      });
-    });
-
-    document.addEventListener("click", () => document.querySelectorAll(".popup").forEach(p => p.classList.remove("show")));
-    document.querySelectorAll(".close-popup").forEach(btn => btn.addEventListener("click", (e) => { e.stopPropagation(); btn.closest(".popup").classList.remove("show"); }));
-
-    // Open Google Form modal
-    document.querySelectorAll(".answer-btn").forEach(btn => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const pin = btn.closest(".pin");
-        pin.classList.add("answered");
-        btn.closest(".popup").classList.remove("show");
-        formModal.classList.add("active");
-      });
-    });
-
-    // Close Google Form modal
-    closeForm.addEventListener("click", () => formModal.classList.remove("active"));
-    formModal.addEventListener("click", (e) => {
-      if (e.target === formModal) formModal.classList.remove("active");
-    });
-  </script>
+</script>
 </body>
 </html>
-
