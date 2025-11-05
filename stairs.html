@@ -56,6 +56,11 @@
     background:#00bcd4;color:#fff;font-size:10px;width:18px;height:18px;border-radius:50%;
     box-shadow:0 3px 6px rgba(0,0,0,.25)
   }
+  .pin.clicked::before {
+  background: #008c9e !important; /* darker turquoise */
+  transform: scale(1.15);
+  box-shadow: 0 0 6px rgba(0,0,0,.35);
+}
   .pin.answered::before{background:#4caf50}
 
   /* popup */
@@ -107,7 +112,27 @@
   .close-form{
     position:absolute;top:10px;right:10px;width:28px;height:28px;border-radius:50%;border:0;background:#ddd;cursor:pointer
   }
-  .done-btn{margin:10px 0 15px;background:#4caf50;color:#fff;border:0;border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer}
+.done-btn {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: #4caf50;
+  border: none;
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,.25);
+  color: white;
+  font-size: 18px;
+}
+.done-btn:hover {
+  background: #43a047;
+}
+
 
   .zoom-controls{position:fixed;right:20px;bottom:20px;background:rgba(255,255,255,.9);padding:8px 12px;border-radius:20px;display:flex;gap:8px;align-items:center;z-index:30}
 
@@ -116,33 +141,32 @@
 </head>
 <body>
 <header>
-  <button id="toggleBtn" class="toggle-btn"><i class="fa fa-bars"></i></button>
   Exterior Stairs
   <button id="nextBtn" class="next-btn">Next <i class="fa fa-arrow-right"></i></button>
 </header>
 
-<div id="sidebar" class="sidebar"><h2>Sidebar Menu</h2><p>Options here</p></div>
+
 
 <div id="mapContainer" class="map-container">
   <div id="mapInner" class="map-inner">
-    <div class="pin" data-x="2300" data-y="1105" data-prefill="Stairs">
+    <div class="pin" data-x="2300" data-y="1105" data-prefill="Left Side Stairs">
       <div class="popup">
-        <img src="stair2.jpg" alt="Stairs"/>
-        <div class="popup-content"><h3>Stairs</h3><p>Exterior</p><button class="answer-btn"><i class="fa fa-location-arrow"></i> Answer</button></div>
+        <img src="stair2.jpg" alt="left-stairs"/>
+        <div class="popup-content"><h3>Left Side Stairs</h3><p>Click answer to start survey </p><button class="answer-btn"><i class="fa fa-location-arrow"></i> Answer</button></div>
       </div>
     </div>
 
-    <div class="pin" data-x="2740" data-y="1105" data-prefill="Lobby">
+    <div class="pin" data-x="2740" data-y="1105" data-prefill="Right Side Stairs">
       <div class="popup">
-        <img src="stair2.jpg" alt="Lobby"/>
-        <div class="popup-content"><h3>Lobby</h3><p>Main Area</p><button class="answer-btn"><i class="fa fa-location-arrow"></i> Answer</button></div>
+        <img src="stair2.jpg" alt="right-stairs"/>
+        <div class="popup-content"><h3>Right Side Stairs</h3><p>Click answer to start survey</p><button class="answer-btn"><i class="fa fa-location-arrow"></i> Answer</button></div>
       </div>
     </div>
 
-    <div class="pin" data-x="2507" data-y="1250" data-prefill="Hallway">
+    <div class="pin" data-x="2507" data-y="1250" data-prefill="Right Side Stairs">
       <div class="popup">
-        <img src="stair2.jpg" alt="Hallway"/>
-        <div class="popup-content"><h3>Hallway</h3><p>Interior</p><button class="answer-btn"><i class="fa fa-location-arrow"></i> Answer</button></div>
+        <img src="stair2.jpg" alt="front-stairs"/>
+        <div class="popup-content"><h3>Front Stairs</h3><p>Click answer to start survey</p><button class="answer-btn"><i class="fa fa-location-arrow"></i> Answer</button></div>
       </div>
     </div>
   </div>
@@ -158,7 +182,9 @@
   <div class="form-content">
     <button id="closeForm" class="close-form">&times;</button>
     <iframe src=""></iframe>
-    <button id="doneBtn" class="done-btn">I am done</button>
+  <button id="doneBtn" class="done-btn">
+  <i class="fa fa-check"></i>
+</button>
   </div>
 </div>
 
@@ -171,8 +197,7 @@ const formModal=document.getElementById('formModal');
 const formIframe=formModal.querySelector('iframe');
 const doneBtn=document.getElementById('doneBtn');
 const closeForm=document.getElementById('closeForm');
-const toggleBtn=document.getElementById('toggleBtn');
-const sidebar=document.getElementById('sidebar');
+
 
 const IMG_W=3509, IMG_H=2480;
 function dbg(...args){console.log('[map-debug]',...args)}
@@ -216,21 +241,28 @@ mapContainer.addEventListener('touchend',endDrag);
 
 const formBaseURL='https://docs.google.com/forms/d/e/1FAIpQLSch3JvOiWKwVYo0wWoQsSoBGtY6jZx1i2JLpZfdYvViT3Z-FA/viewform';
 const prefillField='entry.674587731';
-function freshFormURL(){
+const locationField = "entry.304709299";
+function freshFormURL(label = "") {
   const t = Date.now();
   let url = `${formBaseURL}?t=${t}&embedded=true&usp=pp_url`;
 
-  // include userId in the prefilled field instead of the location label
+  // Prefill userId
   if (userId) {
     url += `&${prefillField}=${encodeURIComponent(userId)}`;
   }
+
+  // Prefill pin label (the new required field)
+  if (label) {
+    url += `&${locationField}=${encodeURIComponent(label)}`;
+  }
   return url;
 }
+
 let watchInterval=null;
 function openFormForPin(pin){
   pin.dataset.activePin='true';
   const label=pin.dataset.prefill||'Unknown';
-  formIframe.src = freshFormURL();
+  formIframe.src = freshFormURL(label);
   formModal.classList.add('active');
   clearInterval(watchInterval);
   watchInterval=setInterval(()=>{
@@ -252,14 +284,23 @@ document.querySelectorAll('.answer-btn').forEach(btn=>{
     openFormForPin(pin);
   });
 });
-pins.forEach(pin=>{
-  pin.addEventListener('click',e=>{
-    if(e.target.closest('.answer-btn'))return;
+pins.forEach(pin => {
+  pin.addEventListener("click", e => {
+    if (e.target.closest(".answer-btn")) return; // ignore button clicks
     e.stopPropagation();
-    pins.forEach(p=>{if(p!==pin)p.classList.remove('clicked')});
-    pin.classList.toggle('clicked');
+
+    const isAlreadyOpen = pin.classList.contains("clicked");
+
+    // close all popups
+    pins.forEach(p => p.classList.remove("clicked"));
+
+    // only open if it wasn't open already
+    if (!isAlreadyOpen) {
+      pin.classList.add("clicked");
+    }
   });
 });
+
 document.addEventListener('click',()=>pins.forEach(p=>p.classList.remove('clicked')));
 
 function loadAnsweredPins(){
@@ -298,10 +339,7 @@ closeForm.addEventListener('click',()=>{
   formIframe.src='';
 });
 formModal.addEventListener('click',ev=>{if(ev.target===formModal)closeForm.click()});
-toggleBtn.addEventListener('click',()=>{
-  sidebar.classList.toggle('active');
-  toggleBtn.innerHTML=sidebar.classList.contains('active')?'<i class="fa fa-times"></i>':'<i class="fa fa-bars"></i>';
-});
+
 // --- Navigation between selected pages ---
 document.getElementById("nextBtn").addEventListener("click", () => {
   const selectedPages = JSON.parse(localStorage.getItem("selectedPages") || "[]");
