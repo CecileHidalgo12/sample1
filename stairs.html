@@ -137,6 +137,104 @@
   .zoom-controls{position:fixed;right:20px;bottom:20px;background:rgba(255,255,255,.9);padding:8px 12px;border-radius:20px;display:flex;gap:8px;align-items:center;z-index:30}
 
   @keyframes fadeIn{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+  /* FIRST POPUP (Preview Modal) */
+/* ✅ Improved Responsive Preview Modal */
+.preview-modal {
+  position: fixed;
+  top: 60px; /* below header */
+  left: 0;
+  width: 100%;
+  height: calc(100% - 60px);
+  background: rgba(0,0,0,.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  visibility: hidden;
+  opacity: 0;
+  transition: all .28s;
+  z-index: 180;
+  padding: 16px; /* prevents edge-clipping */
+}
+
+.preview-modal.active {
+  visibility: visible;
+  opacity: 1;
+}
+
+.preview-content {
+  width: 100%;
+  max-width: 480px;
+  max-height: 100%;
+  background: #fff;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: fadeIn .25s;
+}
+
+/* ✅ Image adjusts to screen height */
+.preview-img {
+  width: 100%;
+  height: 35vh;          /* responsive height */
+  max-height: 260px;     /* limit on desktop */
+  object-fit: cover;
+}
+
+.preview-text {
+  padding: 14px 18px;
+  overflow-y: auto;      /* if content longer than space */
+  max-height: 200px;     /* keeps buttons visible */
+}
+
+.preview-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.preview-desc {
+  margin: 4px 0 12px;
+  color: #555;
+  font-size: 14px;
+}
+
+/* ✅ Buttons always stay visible even if text scrolls */
+.preview-btns {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px;
+  border-top: 1px solid #eee;
+  background: #fff;
+}
+
+.close-preview,
+.proceed-preview {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.close-preview { background: #ddd; }
+.proceed-preview { background: #0288d1; color: white; }
+.proceed-preview:hover { background: #0072b8; }
+
+/* ✅ Mobile optimization */
+@media (max-width: 480px) {
+  .preview-content {
+    max-width: 95%;
+    border-radius: 10px;
+  }
+  .preview-img {
+    height: 30vh;
+  }
+  .preview-title { font-size: 18px; }
+  .preview-desc { font-size: 13px; }
+}
+
 </style>
 </head>
 <body>
@@ -176,6 +274,21 @@
   <i class="fa fa-search-minus"></i>
   <input id="zoomSlider" type="range" min="1" max="3" step="0.1" value="1"/>
   <i class="fa fa-search-plus"></i>
+</div>
+<!-- FIRST POPUP: PREVIEW IMAGE & PROCEED -->
+<div id="previewModal" class="preview-modal">
+  <div class="preview-content">
+    <img id="previewImg" class="preview-img" src="" alt="">
+    <div class="preview-text">
+      <h2 id="previewTitle" class="preview-title"></h2>
+      <p class="preview-desc">Review the space before starting the survey.</p>
+    </div>
+
+    <div class="preview-btns">
+      <button id="closePreview" class="close-preview">Close</button>
+      <button id="proceedPreview" class="proceed-preview">Proceed</button>
+    </div>
+  </div>
 </div>
 
 <div id="formModal" class="form-modal">
@@ -276,14 +389,43 @@ function openFormForPin(pin){
     }catch(e){}
   },800);
 }
+// FIRST: Show preview popup before form
+const previewModal = document.getElementById("previewModal");
+const previewImg = document.getElementById("previewImg");
+const previewTitle = document.getElementById("previewTitle");
+
 document.querySelectorAll('.answer-btn').forEach(btn=>{
   btn.addEventListener('click',e=>{
     e.stopPropagation();
     const pin=e.target.closest('.pin');
     if(!pin)return;
-    openFormForPin(pin);
+
+    // Fill preview modal with data from pin popup
+    const img = pin.querySelector(".popup img").src;
+    const title = pin.querySelector(".popup h3").innerText;
+
+    previewImg.src = img;
+    previewTitle.innerText = title;
+
+    previewModal.classList.add("active");
+
+    // store the active pin for Google form later
+    pin.dataset.activePin = "true";
   });
 });
+// Close preview modal
+document.getElementById("closePreview").addEventListener("click", () => {
+  previewModal.classList.remove("active");
+});
+
+// Proceed → open form modal
+document.getElementById("proceedPreview").addEventListener("click", () => {
+  previewModal.classList.remove("active");
+
+  const active = document.querySelector('[data-active-pin="true"]');
+  if (active) openFormForPin(active);
+});
+
 pins.forEach(pin => {
   pin.addEventListener("click", e => {
     if (e.target.closest(".answer-btn")) return; // ignore button clicks
